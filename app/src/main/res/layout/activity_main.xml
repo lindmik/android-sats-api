@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GridLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.gmail.lindmik.satsapi.MainActivity">
+
+    <TextView
+        android:id="@+id/centersLabel"
+        android:text="Center" />
+
+    <Spinner
+        android:id="@+id/centersSpinner" />
+
+    <TextView
+        android:id="@+id/dateLabel"
+        android:layout_column="0"
+        android:layout_row="1"
+        android:text="Date" />
+
+    <Spinner
+        android:id="@+id/dateSpinner" />
+
+    <ScrollView
+        android:layout_column="0"
+        android:layout_columnSpan="2"
+        android:layout_row="2">
+
+        <TableLayout
+            android:id="@+id/classesTable"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:stretchColumns="*">
+
+        </TableLayout>
+    </ScrollView>
+
+</GridLayout>

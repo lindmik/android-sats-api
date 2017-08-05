@@ -2,7 +2,12 @@ package com.gmail.lindmik.satsapi;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.DatePickerDialog;
+import android.app.Dialog;
+import android.app.DialogFragment;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.support.annotation.NonNull;
@@ -13,11 +18,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Spinner;
+import android.widget.Button;
+import android.widget.DatePicker;
+import android.widget.ListAdapter;
 import android.widget.TableLayout;
-import android.widget.TableRow;
 import android.widget.TextView;
 
 import com.android.volley.RequestQueue;
@@ -75,46 +80,35 @@ public class MainActivity extends Activity {
             });
         }
 
-        Spinner centerSpinner = findViewById(R.id.centersSpinner);
-        centerSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                selectedCenter = (Center) adapterView.getAdapter().getItem(i);
-                update();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-            }
-        });
-
-        List<LocalDate> dates = new ArrayList<>();
-        LocalDate currentDate = LocalDate.now();
-        for (int i = 0; i < 14; i++) {
-            dates.add(currentDate.plusDays(i));
-        }
-        ArrayAdapter<LocalDate> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, dates);
-        Spinner dateSpinner = findViewById(R.id.dateSpinner);
-        dateSpinner.setAdapter(adapter);
-        dateSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                selectedDate = ((LocalDate) adapterView.getAdapter().getItem(i));
-                update();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-            }
-        });
+        setDate(LocalDate.now());
 
         queue.add(createCentersRequest());
     }
 
-    private void update() {
-        if (selectedDate != null && selectedCenter != null) {
-            queue.add(createClassesRequest());
+    private void setCenter(Center center) {
+        selectedCenter = center;
+        Button centerButton = findViewById(R.id.centerButton);
+        centerButton.setText(selectedCenter.name);
+        fetchClasses();
+    }
+
+    private void setDate(LocalDate date) {
+        selectedDate = date;
+        Button dateButton = findViewById(R.id.dateButton);
+        dateButton.setText(selectedDate.toString());
+        fetchClasses();
+    }
+
+    private void fetchClasses() {
+        if (selectedDate == null) {
+            return;
         }
+
+        if (selectedCenter == null) {
+            return;
+        }
+
+        queue.add(createClassesRequest());
     }
 
     private JsonObjectRequest createClassesRequest() {
@@ -173,10 +167,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    private String formatDate(String dateTimeString) {
-        return dateTimeString.substring(11, 16);
-    }
-
     private void handleCentersResponse(JSONObject response) throws JSONException {
         centers.clear();
         JSONArray regionsArray = response.getJSONArray("regions");
@@ -194,8 +184,7 @@ public class MainActivity extends Activity {
             }
         }
         sortCenters();
-        Spinner centerSpinner = findViewById(R.id.centersSpinner);
-        centerSpinner.setAdapter(new CenterSpinnerAdapter(this, android.R.layout.simple_spinner_item, centers));
+        setCenter(centers.get(0));
     }
 
     private void sortCenters() {
@@ -213,6 +202,16 @@ public class MainActivity extends Activity {
         });
     }
 
+    public void showCenterPickerDialog(View v) {
+        DialogFragment newFragment = new CenterPickerFragment();
+        newFragment.show(getFragmentManager(), "centerPicker");
+    }
+
+    public void showDatePickerDialog(View v) {
+        DialogFragment newFragment = new DatePickerFragment();
+        newFragment.show(getFragmentManager(), "datePicker");
+    }
+
     private static class Center {
 
         public String id;
@@ -225,32 +224,67 @@ public class MainActivity extends Activity {
         }
     }
 
-    public class CenterSpinnerAdapter extends ArrayAdapter<Center> {
+    public static class CenterPickerFragment extends DialogFragment implements DialogInterface.OnClickListener {
 
         private List<Center> centers;
 
-        public CenterSpinnerAdapter(Context context, int textViewResourceId, List<Center> centers) {
-            super(context, textViewResourceId, centers);
-            this.centers = centers;
-        }
-
-        public int getCount() {
-            return centers.size();
-        }
-
-        public Center getItem(int position) {
-            return centers.get(position);
-        }
-
-        public long getItemId(int position) {
-            return position;
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            this.centers = ((MainActivity) getActivity()).centers;
+            Location lastLocation = ((MainActivity) getActivity()).lastLocation;
+            return new AlertDialog.Builder(getActivity()).setAdapter(new CenterAdapter(getActivity(), centers, lastLocation), this).create();
         }
 
         @Override
-        public View getDropDownView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-            Center center = getItem(position);
+        public void onClick(DialogInterface dialogInterface, int i) {
+            ((MainActivity) getActivity()).setCenter(centers.get(i));
+        }
+    }
 
-            LayoutInflater inflater = getLayoutInflater();
+    public static class DatePickerFragment extends DialogFragment implements DatePickerDialog.OnDateSetListener {
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            // Use the current date as the default date in the picker
+            final LocalDate now = LocalDate.now();
+            int year = now.getYear();
+            int month = now.getMonthValue() - 1;
+            int day = now.getDayOfMonth();
+
+            // Create a new instance of DatePickerDialog and return it
+            return new DatePickerDialog(getActivity(), this, year, month, day);
+        }
+
+        public void onDateSet(DatePicker view, int year, int month, int day) {
+            ((MainActivity) getActivity()).setDate(LocalDate.of(year, month + 1, day));
+        }
+    }
+
+    private static class CenterAdapter extends ArrayAdapter<CharSequence> {
+
+        private Activity activity;
+
+        private final List<Center> centers;
+        private Location lastLocation;
+
+        public CenterAdapter(Activity activity, List<Center> centers, Location lastLocation) {
+            super(activity, R.layout.center_row);
+            this.activity = activity;
+
+            this.centers = centers;
+            this.lastLocation = lastLocation;
+
+            for (int i = 0; i < centers.size(); i++) {
+                add(centers.get(i).name);
+            }
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            Center center = centers.get(position);
+
+            LayoutInflater inflater = activity.getLayoutInflater();
             View spView = inflater.inflate(R.layout.center_row, parent, false);
 
             TextView nameTextView = spView.findViewById(R.id.name);
@@ -263,7 +297,6 @@ public class MainActivity extends Activity {
             } else {
                 distanceTextView.setText("");
             }
-
             return spView;
         }
     }

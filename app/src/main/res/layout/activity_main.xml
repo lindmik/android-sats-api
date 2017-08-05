@@ -9,8 +9,9 @@
         android:id="@+id/centersLabel"
         android:text="Center" />
 
-    <Spinner
-        android:id="@+id/centersSpinner" />
+    <Button
+        android:id="@+id/centerButton"
+        android:onClick="showCenterPickerDialog" />
 
     <TextView
         android:id="@+id/dateLabel"
@@ -18,8 +19,9 @@
         android:layout_row="1"
         android:text="Date" />
 
-    <Spinner
-        android:id="@+id/dateSpinner" />
+    <Button
+        android:id="@+id/dateButton"
+        android:onClick="showDatePickerDialog" />
 
     <ScrollView
         android:layout_column="0"

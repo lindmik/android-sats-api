@@ -32,7 +32,9 @@ import com.jakewharton.threetenabp.AndroidThreeTen;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.threeten.bp.Instant;
 import org.threeten.bp.LocalDate;
+import org.threeten.bp.ZoneId;
 import org.threeten.bp.format.DateTimeFormatter;
 
 import java.util.ArrayList;
@@ -165,7 +167,7 @@ public class MainActivity extends Activity {
             ((TextView) row.findViewById(R.id.name)).setText(class1.getString("name"));
             ((TextView) row.findViewById(R.id.duration)).setText(String.format("%d min", class1.getInt("durationInMinutes")));
             ((TextView) row.findViewById(R.id.instructor)).setText(class1.getString("instructorId"));
-            ((TextView) row.findViewById(R.id.startTime)).setText(formatDate(class1.getString("startTime")));
+            ((TextView) row.findViewById(R.id.startTime)).setText(DateTimeFormatter.ISO_DATE_TIME.parse(class1.getString("startTime"), Instant.FROM).atZone(ZoneId.systemDefault()).toLocalTime().toString());
             ((TextView) row.findViewById(R.id.persons)).setText(String.format("%d/%d (%d)", class1.getInt("bookedPersonsCount"), class1.getInt("maxPersonsCount"), class1.getInt("waitingListCount")));
             classesTable.addView(row);
         }
